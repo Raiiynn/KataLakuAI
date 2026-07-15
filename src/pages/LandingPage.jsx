@@ -323,11 +323,11 @@ export default function LandingPage() {
               </div>
               <ul className="pricing-features">
                 <li><Check size={16} /> 1000 Kredit Pembuatan / Bulan</li>
-                <li><Check size={16} /> Template Suara Brand Custom</li>
-                <li><Check size={16} /> Analisis Tren Media Sosial</li>
-                <li><Check size={16} /> Akses Kolaborasi Tim (Segera)</li>
-                <li><Check size={16} /> Prioritas API & Server Utama</li>
-                <li><Check size={16} /> Dedicated Account Manager</li>
+                <li><Check size={16} /> Akses Semua Tone Premium</li>
+                <li><Check size={16} /> Laporan Mingguan & Niche Insights</li>
+                <li><Check size={16} /> Kelola Hingga 3 Kategori Produk/Brand</li>
+                <li><Check size={16} /> Prioritas Kecepatan AI (Tanpa Antre)</li>
+                <li><Check size={16} /> Dukungan Prioritas 24/7 (WhatsApp/Email)</li>
               </ul>
               <button onClick={handleCtaClick} className="btn btn-secondary btn-block">Hubungi Kami</button>
             </div>

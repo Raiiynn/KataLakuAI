@@ -327,7 +327,7 @@ OUTPUT FORMAT:
           </div>
 
           <div className="form-group">
-            <label className="form-label">Nada Bicara (Tone)</label>
+            <label className="form-label">Tone</label>
             <div className="chip-group">
               {TONES.map(t => (
                 <button
@@ -344,7 +344,7 @@ OUTPUT FORMAT:
                   className={`chip premium ${tone === t ? 'active' : ''}`}
                   onClick={() => {
                     if (!isPro) {
-                      toast.info('Nada bicara premium hanya tersedia untuk anggota Pro.');
+                      toast.info('Tone premium hanya tersedia untuk anggota Pro.');
                       return;
                     }
                     setTone(t);

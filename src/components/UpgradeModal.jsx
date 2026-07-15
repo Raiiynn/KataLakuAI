@@ -1,15 +1,11 @@
 import { useCredits } from '../context/CreditContext';
-import { X, Sparkles, Zap, Calendar, Ban, Crown } from 'lucide-react';
+import { X, Crown, Check } from 'lucide-react';
 import './UpgradeModal.css';
 
 export default function UpgradeModal() {
-  const { showUpgradeModal, closeUpgradeModal, upgradeToPro } = useCredits();
+  const { showUpgradeModal, closeUpgradeModal, upgradeToPlan } = useCredits();
 
   if (!showUpgradeModal) return null;
-
-  const handleUpgrade = () => {
-    upgradeToPro();
-  };
 
   return (
     <div className="upgrade-overlay" onClick={closeUpgradeModal}>
@@ -22,44 +18,65 @@ export default function UpgradeModal() {
           <div className="upgrade-icon-wrapper">
             <Crown size={32} />
           </div>
-          <h2 className="upgrade-title">Upgrade to Pro</h2>
+          <h2 className="upgrade-title">Pilih Plan Terbaik Anda</h2>
           <p className="upgrade-subtitle">
-            You've used all your free credits this month. Upgrade to unlock unlimited power!
+            Kembangkan bisnis Anda ke level berikutnya dengan fitur AI unggulan dari KataLaku AI.
           </p>
         </div>
 
-        <div className="upgrade-price">
-          <span className="upgrade-currency">Rp</span>
-          <span className="upgrade-amount">19.000</span>
-          <span className="upgrade-period">/month</span>
+        <div className="upgrade-plans-grid">
+          {/* Pro Creator Plan */}
+          <div className="upgrade-plan-card popular">
+            <div className="plan-badge">Paling Populer</div>
+            <h3 className="plan-name">Pro Creator</h3>
+            <p className="plan-desc">Untuk pertumbuhan cepat media sosial</p>
+            <div className="plan-price">
+              <span className="price-currency">Rp</span>
+              <span className="price-amount">99k</span>
+              <span className="price-period">/bulan</span>
+            </div>
+            <ul className="plan-features">
+              <li><Check size={16} /> 200 Kredit / Bulan</li>
+              <li><Check size={16} /> AI Engine Prioritas (Lebih Cepat)</li>
+              <li><Check size={16} /> Akses Content Planner Penuh</li>
+              <li><Check size={16} /> Riwayat Selamanya</li>
+              <li><Check size={16} /> Akses Fitur Premium Baru</li>
+            </ul>
+            <button
+              className="btn btn-primary upgrade-cta"
+              onClick={() => upgradeToPlan('pro')}
+            >
+              Upgrade ke Pro
+            </button>
+          </div>
+
+          {/* Business Plan */}
+          <div className="upgrade-plan-card">
+            <h3 className="plan-name">Business</h3>
+            <p className="plan-desc">Untuk tim & agensi sosial media</p>
+            <div className="plan-price">
+              <span className="price-currency">Rp</span>
+              <span className="price-amount">299k</span>
+              <span className="price-period">/bulan</span>
+            </div>
+            <ul className="plan-features">
+              <li><Check size={16} /> 1000 Kredit / Bulan</li>
+              <li><Check size={16} /> Akses Semua Tone Premium</li>
+              <li><Check size={16} /> Laporan Mingguan & Niche Insights</li>
+              <li><Check size={16} /> Kelola Hingga 3 Kategori Produk</li>
+              <li><Check size={16} /> Prioritas Kecepatan AI (Tanpa Antre)</li>
+            </ul>
+            <button
+              className="btn btn-secondary upgrade-cta"
+              onClick={() => upgradeToPlan('business')}
+            >
+              Pilih Business
+            </button>
+          </div>
         </div>
 
-        <ul className="upgrade-benefits">
-          <li>
-            <Sparkles size={18} />
-            <span>Unlimited AI Caption Generations</span>
-          </li>
-          <li>
-            <Zap size={18} />
-            <span>Premium Writing Tones</span>
-          </li>
-          <li>
-            <Calendar size={18} />
-            <span>Unlimited Weekly Planner</span>
-          </li>
-          <li>
-            <Ban size={18} />
-            <span>No Ads Experience</span>
-          </li>
-        </ul>
-
-        <button className="btn btn-primary btn-lg upgrade-cta" onClick={handleUpgrade}>
-          <Crown size={18} />
-          Upgrade to Pro
-        </button>
-
         <button className="upgrade-skip" onClick={closeUpgradeModal}>
-          Maybe later
+          Mungkin Nanti
         </button>
       </div>
     </div>

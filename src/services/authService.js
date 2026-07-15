@@ -206,12 +206,8 @@ export async function useCredit(userId) {
   const profile = await getProfile(userId);
   if (!profile) return null;
 
-  if (profile.subscriptionPlan === 'pro') {
-    return { remainingCredits: Infinity, plan: 'pro' };
-  }
-
   if (profile.remainingCredits <= 0) {
-    return { remainingCredits: 0, plan: 'free', needsUpgrade: true };
+    return { remainingCredits: 0, plan: profile.subscriptionPlan, needsUpgrade: true };
   }
 
   const nextCredits = profile.remainingCredits - 1;
@@ -225,7 +221,7 @@ export async function useCredit(userId) {
 
   return {
     remainingCredits: nextCredits,
-    plan: 'free',
+    plan: profile.subscriptionPlan,
     needsUpgrade: nextCredits <= 0,
   };
 }
@@ -235,7 +231,33 @@ export async function upgradeToPro(userId) {
     .from('profiles')
     .update({
       subscription_plan: 'pro',
-      remaining_credits: 999999, // standard representation for DB
+      remaining_credits: 200,
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    fullName: data.full_name,
+    businessName: data.business_name,
+    email: data.email,
+    subscriptionPlan: data.subscription_plan,
+    remainingCredits: data.remaining_credits,
+    productCategory: data.product_category || localStorage.getItem('local_category_' + data.id) || null,
+    createdAt: data.created_at,
+  };
+}
+
+export async function upgradeToPlan(userId, plan) {
+  const credits = plan === 'business' ? 1000 : 200;
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      subscription_plan: plan,
+      remaining_credits: credits,
     })
     .eq('id', userId)
     .select()

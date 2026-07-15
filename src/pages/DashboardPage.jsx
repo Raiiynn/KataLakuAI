@@ -13,7 +13,7 @@ import './DashboardPage.css';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { remainingCredits, isPro, openUpgradeModal } = useCredits();
+  const { remainingCredits, isPro, openUpgradeModal, subscriptionPlan } = useCredits();
 
   const [captionsCount, setCaptionsCount] = useState(0);
   const [postsCount, setPostsCount] = useState(0);
@@ -95,7 +95,7 @@ export default function DashboardPage() {
   };
 
   const totalPostsPlanned = postsCount + (hasWeeklyPlan ? 7 : 0);
-  const creditsDisplay = isPro ? '∞' : remainingCredits;
+  const creditsDisplay = remainingCredits;
   const greeting = getGreeting();
 
   return (
@@ -120,9 +120,15 @@ export default function DashboardPage() {
           </div>
           <div className="stat-info">
             <span className="stat-value">{creditsDisplay}</span>
-            <span className="stat-label">{isPro ? 'Unlimited Plan' : 'Credits Remaining'}</span>
+            <span className="stat-label">
+              {subscriptionPlan === 'business'
+                ? 'Business Plan'
+                : subscriptionPlan === 'pro'
+                ? 'Pro Creator Plan'
+                : 'Kredit Tersisa'}
+            </span>
           </div>
-          {!isPro && (
+          {subscriptionPlan !== 'business' && (
             <button className="stat-action" onClick={openUpgradeModal}>
               Upgrade
             </button>
@@ -216,14 +222,18 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Pro Banner (for free users) */}
-      {!isPro && (
+      {/* Pro Banner (for free/pro users) */}
+      {subscriptionPlan !== 'business' && (
         <section className="dashboard-pro-banner" onClick={openUpgradeModal}>
           <div className="pro-banner-content">
             <Crown size={24} />
             <div>
-              <h3>Upgrade to Pro</h3>
-              <p>Get unlimited captions, premium tones, and more for just Rp19.000/month</p>
+              <h3>{subscriptionPlan === 'pro' ? 'Upgrade to Business Plan' : 'Upgrade to Pro Creator'}</h3>
+              <p>
+                {subscriptionPlan === 'pro'
+                  ? 'Dapatkan 1000 kredit, prioritas kecepatan AI tanpa antre, dan kelola hingga 3 kategori produk!'
+                  : 'Dapatkan 200 kredit pembuatan, AI lebih cepat, dan akses premium hanya dengan Rp99k/bulan'}
+              </p>
             </div>
           </div>
           <button className="btn btn-primary">

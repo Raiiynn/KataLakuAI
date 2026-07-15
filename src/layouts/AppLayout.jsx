@@ -31,7 +31,7 @@ const NAV_ITEMS = [
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
-  const { remainingCredits, isPro } = useCredits();
+  const { remainingCredits, isPro, subscriptionPlan } = useCredits();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -41,7 +41,7 @@ export default function AppLayout() {
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const creditsDisplay = isPro ? '∞' : remainingCredits;
+  const creditsDisplay = remainingCredits;
 
   return (
     <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -84,21 +84,28 @@ export default function AppLayout() {
             <div className="credits-card">
               <div className="credits-card-header">
                 {isPro ? <Crown size={16} /> : <Zap size={16} />}
-                <span>{isPro ? 'Pro Plan' : 'Free Plan'}</span>
+                <span>
+                  {subscriptionPlan === 'business'
+                    ? 'Business Plan'
+                    : subscriptionPlan === 'pro'
+                    ? 'Pro Creator'
+                    : 'Free Plan'}
+                </span>
               </div>
               <div className="credits-card-value">
                 <span className="credits-number">{creditsDisplay}</span>
-                {!isPro && <span className="credits-label">credits left</span>}
-                {isPro && <span className="credits-label">unlimited</span>}
+                <span className="credits-label">
+                  / {subscriptionPlan === 'business' ? 1000 : subscriptionPlan === 'pro' ? 200 : 10} kredit
+                </span>
               </div>
-              {!isPro && (
-                <div className="credits-bar">
-                  <div
-                    className="credits-bar-fill"
-                    style={{ width: `${(remainingCredits / 10) * 100}%` }}
-                  />
-                </div>
-              )}
+              <div className="credits-bar">
+                <div
+                  className="credits-bar-fill"
+                  style={{
+                    width: `${(remainingCredits / (subscriptionPlan === 'business' ? 1000 : subscriptionPlan === 'pro' ? 200 : 10)) * 100}%`
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div className="credits-mini" title={`${creditsDisplay} credits`}>
@@ -137,7 +144,7 @@ export default function AppLayout() {
           <div className="topbar-right">
             <div className={`topbar-credits ${isPro ? 'pro' : ''}`}>
               {isPro ? <Crown size={14} /> : <Zap size={14} />}
-              <span>{creditsDisplay} {isPro ? '' : 'credits'}</span>
+              <span>{creditsDisplay} kredit</span>
             </div>
 
             <div className="topbar-user">

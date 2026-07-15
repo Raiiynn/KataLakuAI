@@ -62,7 +62,7 @@ export default function ContentPlannerPage() {
     try {
       const result = await generateWeeklyPlan(user.id, user.productCategory, isPro);
       if (result.error === 'QUOTA_EXCEEDED') {
-        toast.error('Quota mingguan tercapai. Upgrade ke Pro untuk mendapatkan unlimited plan!');
+        toast.error('Quota mingguan tercapai. Upgrade ke Pro Creator atau Business untuk membuat lebih banyak rencana konten!');
         openUpgradeModal();
         return;
       }
@@ -122,7 +122,7 @@ export default function ContentPlannerPage() {
             <div>
               <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>Rencana Minggu Ini ({weekStart})</h3>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                {isPro ? '✨ Anda menikmati akses pembuatan rencana konten tanpa batas.' : '🔒 Akun Free terbatas 1x pembuatan rencana per minggu.'}
+                {isPro ? '✨ Anda menikmati akses penuh pembuatan Rencana Konten Mingguan.' : '🔒 Akun Free terbatas 1x pembuatan rencana per minggu.'}
               </p>
             </div>
             <button className="btn btn-secondary btn-sm" onClick={handleGenerate} disabled={isGenerating}>
