@@ -8,7 +8,7 @@ import { Sparkles, Zap, Copy, RotateCcw } from 'lucide-react';
 import './ProtectedPages.css';
 
 const PLATFORMS = ['Instagram', 'Facebook', 'Twitter/X', 'TikTok', 'LinkedIn'];
-const TONES = ['Professional', 'Casual', 'Funny', 'Inspirational', 'Urgent', 'Storytelling'];
+const TONES = ['Professional', 'Casual', 'Funny', 'Inspirational', 'Urgent', 'Storytelling', 'Hard Selling'];
 const PREMIUM_TONES = ['Luxury', 'Gen-Z', 'Poetic', 'Controversial'];
 
 // Hook styles pool (Indonesian)
@@ -114,6 +114,8 @@ function generateRandomizedCaption(description, platform, tone, excludeHooks = [
     bodyText = `Percayalah bahwa setiap investasi kecil pada kualitas hidup Anda akan berbuah manis di masa depan.`;
   } else if (tone === 'Storytelling') {
     bodyText = `Kami merancang setiap detail dengan dedikasi tinggi agar produk ini bukan sekadar barang biasa, melainkan teman setia perjalanan Anda.`;
+  } else if (tone === 'Hard Selling') {
+    bodyText = `DAPATKAN DISKON BESAR-BESARAN HARI INI! Produk terbaik ini sedang promo super hemat khusus untuk Anda yang gerak cepat. Beli sekarang sebelum kehabisan!`;
   }
 
   return `${hookText}\n\n${bodyText}\n\n${closingText} ✨🚀\n\n#KataLakuAI #${platformHashtag} #BisnisLokal`;

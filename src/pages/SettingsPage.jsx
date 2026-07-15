@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { getNotificationPreferences, updateNotificationPreferences } from '../services/authService';
 import { Settings as SettingsIcon, Bell, Shield, Palette, Globe, Tag } from 'lucide-react';
 import './ProtectedPages.css';
 
@@ -8,6 +9,18 @@ export default function SettingsPage() {
   const { user, updateCategory } = useAuth();
   const toast = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Notification preferences state
+  const [emailNotif, setEmailNotif] = useState(true);
+  const [weeklyReport, setWeeklyReport] = useState(true);
+
+  useEffect(() => {
+    if (user?.id) {
+      const prefs = getNotificationPreferences(user.id);
+      setEmailNotif(prefs.emailNotifications);
+      setWeeklyReport(prefs.weeklyReport);
+    }
+  }, [user]);
 
   const handleCategoryChange = async (e) => {
     const newCategory = e.target.value;
@@ -21,6 +34,20 @@ export default function SettingsPage() {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleEmailNotifToggle = async () => {
+    const newVal = !emailNotif;
+    setEmailNotif(newVal);
+    await updateNotificationPreferences(user.id, { emailNotifications: newVal });
+    toast.success(newVal ? 'Email notifications diaktifkan' : 'Email notifications dinonaktifkan');
+  };
+
+  const handleWeeklyReportToggle = async () => {
+    const newVal = !weeklyReport;
+    setWeeklyReport(newVal);
+    await updateNotificationPreferences(user.id, { weeklyReport: newVal });
+    toast.success(newVal ? 'Weekly Report diaktifkan' : 'Weekly Report dinonaktifkan');
   };
 
   return (
@@ -71,7 +98,7 @@ export default function SettingsPage() {
               <p className="settings-item-desc">Get notified about new features and tips</p>
             </div>
             <label className="toggle">
-              <input type="checkbox" defaultChecked />
+              <input type="checkbox" checked={emailNotif} onChange={handleEmailNotifToggle} />
               <span className="toggle-slider" />
             </label>
           </div>
@@ -81,7 +108,7 @@ export default function SettingsPage() {
               <p className="settings-item-desc">Receive weekly performance summaries</p>
             </div>
             <label className="toggle">
-              <input type="checkbox" />
+              <input type="checkbox" checked={weeklyReport} onChange={handleWeeklyReportToggle} />
               <span className="toggle-slider" />
             </label>
           </div>

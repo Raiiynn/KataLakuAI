@@ -320,3 +320,44 @@ export async function updateProductCategory(userId, productCategory) {
   return null;
 }
 
+// ---------- Notification Preferences ----------
+
+const NOTIF_STORAGE_KEY = (userId) => `notif_prefs_${userId}`;
+
+export function getNotificationPreferences(userId) {
+  const stored = localStorage.getItem(NOTIF_STORAGE_KEY(userId));
+  if (stored) {
+    try { return JSON.parse(stored); } catch { /* fallthrough */ }
+  }
+  return { emailNotifications: true, weeklyReport: true };
+}
+
+export async function updateNotificationPreferences(userId, prefs) {
+  // Always persist locally first for immediate UX
+  const current = getNotificationPreferences(userId);
+  const merged = { ...current, ...prefs };
+  localStorage.setItem(NOTIF_STORAGE_KEY(userId), JSON.stringify(merged));
+
+  // Attempt to persist in Supabase (graceful if columns don't exist yet)
+  try {
+    const dbUpdate = {};
+    if (prefs.emailNotifications !== undefined) dbUpdate.email_notifications = prefs.emailNotifications;
+    if (prefs.weeklyReport !== undefined) dbUpdate.weekly_report = prefs.weeklyReport;
+
+    if (Object.keys(dbUpdate).length > 0) {
+      const { error } = await supabase
+        .from('profiles')
+        .update(dbUpdate)
+        .eq('id', userId);
+
+      if (error) {
+        console.warn('DB notification prefs update failed (column may not exist), using localStorage:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('DB notification prefs exception, localStorage fallback active:', err);
+  }
+
+  return merged;
+}
+

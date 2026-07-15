@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCredits } from '../context/CreditContext';
 import { supabase } from '../utils/supabase';
+import { getNotificationPreferences } from '../services/authService';
 import { Link } from 'react-router-dom';
 import {
   Sparkles, Clock, CalendarDays, Zap, Crown,
-  TrendingUp, MessageSquare, Target
+  TrendingUp, MessageSquare, Target, FileBarChart
 } from 'lucide-react';
+import WeeklyReportModal from '../components/WeeklyReportModal';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
@@ -16,6 +18,8 @@ export default function DashboardPage() {
   const [captionsCount, setCaptionsCount] = useState(0);
   const [postsCount, setPostsCount] = useState(0);
   const [hasWeeklyPlan, setHasWeeklyPlan] = useState(false);
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false);
+  const [weeklyReportEnabled, setWeeklyReportEnabled] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -56,6 +60,12 @@ export default function DashboardPage() {
       }
     }
     fetchStats();
+
+    // Check if weekly report notification is enabled
+    if (user?.id) {
+      const prefs = getNotificationPreferences(user.id);
+      setWeeklyReportEnabled(prefs.weeklyReport);
+    }
   }, [user]);
 
   // Helper: Get Monday of the current week (YYYY-MM-DD)
@@ -149,6 +159,32 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* Weekly Report Banner */}
+      {weeklyReportEnabled && (
+        <div className="weekly-report-banner" onClick={() => setShowWeeklyReport(true)}>
+          <div className="wr-banner-left">
+            <div className="wr-banner-icon">
+              <FileBarChart size={20} />
+            </div>
+            <div className="wr-banner-text">
+              <h4>📊 Laporan Mingguan Anda Sudah Siap!</h4>
+              <p>Lihat performa konten dan rekomendasi AI untuk minggu ini.</p>
+            </div>
+          </div>
+          <span className="wr-banner-action">Lihat Laporan</span>
+        </div>
+      )}
+
+      {/* Weekly Report Modal */}
+      {showWeeklyReport && (
+        <WeeklyReportModal
+          onClose={() => setShowWeeklyReport(false)}
+          captionsCount={captionsCount}
+          postsPlanned={totalPostsPlanned}
+          engagementRate={getEstimatedEngagementRate()}
+        />
+      )}
 
       {/* Quick Actions */}
       <section className="dashboard-actions">
