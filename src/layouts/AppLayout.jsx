@@ -3,6 +3,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCredits } from '../context/CreditContext';
 import UpgradeModal from '../components/UpgradeModal';
+import CategoryOnboardingModal from '../components/CategoryOnboardingModal';
 import {
   LayoutDashboard,
   Sparkles,
@@ -161,6 +162,7 @@ export default function AppLayout() {
       </div>
 
       <UpgradeModal />
+      <CategoryOnboardingModal />
     </div>
   );
 }

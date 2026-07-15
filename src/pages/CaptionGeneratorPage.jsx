@@ -1,144 +1,157 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCredits } from '../context/CreditContext';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../utils/supabase';
-import { Sparkles, Zap, Copy, Heart, RotateCcw } from 'lucide-react';
+import { Sparkles, Zap, Copy, RotateCcw } from 'lucide-react';
 import './ProtectedPages.css';
 
 const PLATFORMS = ['Instagram', 'Facebook', 'Twitter/X', 'TikTok', 'LinkedIn'];
 const TONES = ['Professional', 'Casual', 'Funny', 'Inspirational', 'Urgent', 'Storytelling'];
 const PREMIUM_TONES = ['Luxury', 'Gen-Z', 'Poetic', 'Controversial'];
 
-// Heuristic to detect if the text is in Indonesian
-function isIndonesianText(text) {
-  const idKeywords = [
-    'yang', 'dan', 'di', 'dengan', 'untuk', 'pada', 'ke', 'dari', 'ini', 'itu',
-    'bisa', 'buat', 'adalah', 'kami', 'saya', 'kamu', 'mereka', 'kita',
-    'makanan', 'goreng', 'bumbu', 'khas', 'enak', 'murah', 'promo', 'beli', 'sekarang',
-    'dapatkan', 'hari', 'ada', 'tidak', 'selamat', 'pagi', 'siang', 'malam',
-    'rasa', 'terbaik', 'solusi', 'produk', 'jasa', 'layanan', 'ayam', 'madu', 'lucu', 'akrilik'
-  ];
-  
-  const words = text.toLowerCase().split(/[^a-zA-Z0-9]+/);
-  const matchCount = words.filter(w => idKeywords.includes(w)).length;
-  
-  // If we match 1 or more common Indonesian words, or if it doesn't look like common English start
-  return matchCount > 0 || (words.length > 0 && !/^(the|and|of|to|is|in|it|you|that|was|for|on|are|as|with|his|they|i|at|be|this|have|from)$/i.test(words[0]));
-}
+// Hook styles pool (Indonesian)
+const HOOK_STYLE_POOL = [
+  { name: 'Rhetorical Question', template: (desc) => `Udah nemu yang paling cocok belum buat masalah Anda? 🤔 Nah, ${desc} ini hadir buat Anda.` },
+  { name: 'Mini-Storytelling', template: (desc) => `Ceritanya, banyak banget yang curhat butuh solusi praktis. Akhirnya lahirlah ${desc} ini untuk Anda! ✨` },
+  { name: 'Fakta Menarik', template: (desc) => `Fakta unik hari ini: 9 dari 10 orang yang cobain ini langsung ketagihan! Kenalin, ${desc}. 🔥` },
+  { name: 'Urgency FOMO', template: (desc) => `⚠️ PEMBERITAHUAN PENTING! Stok ${desc} makin menipis hari ini. Jangan sampai nyesel kehabisan ya!` },
+  { name: 'Sapaan Personal', template: (desc) => `Halo bestie! Khusus buat kamu yang lagi pusing cari solusi, ${desc} adalah jawaban terbaikmu. 💕` },
+  { name: 'Before After', template: (desc) => `Dulu ribet banget ngurusin hal ini, tapi sekarang tinggal pakai ${desc} semua langsung beres secara instan!` },
+  { name: 'Benefit Hook', template: (desc) => `Nggak perlu buang waktu dan tenaga lagi! Dengan ${desc}, hari-hari kamu jadi jauh lebih mudah.` },
+  { name: 'Emoji Hook', template: (desc) => `✨ JANGAN DI-SCROLL DULU ✨ Ada yang spesial dari ${desc} yang siap bikin kamu terpukau hari ini!` }
+];
 
-// Generate contextually matched captions
-function generateMockCaption(description, platform, tone) {
-  const isId = isIndonesianText(description);
-  
-  // Clean description slightly for embedding
-  let desc = description.trim();
-  // Lowercase first letter if it doesn't look like a proper noun
-  if (desc.length > 0 && desc[0] === desc[0].toUpperCase() && !/^[A-Z][A-Z\s]+$/.test(desc.slice(0, 3))) {
-    desc = desc[0].toLowerCase() + desc.slice(1);
+// Closing styles pool (Indonesian)
+const CLOSING_STYLE_POOL = [
+  { name: 'Soft CTA', template: 'Hubungi admin kami lewat DM atau WhatsApp buat konsultasi santai dulu ya~' },
+  { name: 'Urgency CTA', template: 'Amankan milikmu sekarang juga sebelum promo hemat ini ditutup malam ini!' },
+  { name: 'Question CTA', template: 'Kira-kira kamu tertarik coba varian yang mana nih? Yuk tulis di kolom komentar!' },
+  { name: 'Playful CTA', template: 'Jangan cuma dilihatin dan dimasukkan keranjang ya, langsung checkout dong biar langsung dikirim! 😄' },
+  { name: 'Direct CTA', template: 'Beli sekarang juga melalui link e-commerce resmi yang ada di bio profil kami.' }
+];
+
+// Fallback generator using randomized hooks & closings excluding recently used
+function generateRandomizedCaption(description, platform, tone, excludeHooks = [], excludeClosings = []) {
+  let cleanDesc = description.trim();
+  let themeName = '';
+
+  // Detect Content Planner prefilled structure
+  if (cleanDesc.includes('Tema Konten:') && cleanDesc.includes('Konteks:')) {
+    const themeMatch = cleanDesc.match(/Tema Konten:\s*(.*?)\.\s*Konteks:/);
+    if (themeMatch) {
+      themeName = themeMatch[1].trim();
+    }
+    const contextParts = cleanDesc.split('Konteks:');
+    if (contextParts.length > 1) {
+      cleanDesc = contextParts[1].trim();
+    }
   }
 
-  // Derive simple hashtag category
-  const words = description.toLowerCase().split(/[^a-zA-Z]+/);
-  const category = words.find(w => w.length > 4) || 'product';
-  const hashtagCategory = category.charAt(0).toUpperCase() + category.slice(1);
+  // Lowercase first letter if appropriate
+  if (cleanDesc.length > 0 && cleanDesc[0] === cleanDesc[0].toUpperCase() && !/^[A-Z][A-Z\s]+$/.test(cleanDesc.slice(0, 3))) {
+    cleanDesc = cleanDesc[0].toLowerCase() + cleanDesc.slice(1);
+  }
 
-  const platformHashtag = platform.replace(/[^a-zA-Z0-9]/g, '');
+  // Filter pools
+  const availableHooks = HOOK_STYLE_POOL.filter(h => !excludeHooks.includes(h.name));
+  const hookObj = availableHooks.length > 0 
+    ? availableHooks[Math.floor(Math.random() * availableHooks.length)]
+    : HOOK_STYLE_POOL[Math.floor(Math.random() * HOOK_STYLE_POOL.length)];
 
-  if (isId) {
-    // Indonesian Templates
-    switch (tone) {
-      case 'Professional':
-        return `💼 Memperkenalkan ${desc}. Solusi berkualitas tinggi yang dirancang khusus untuk memenuhi kebutuhan Anda dengan hasil terbaik.\n\nDapatkan performa maksimal dan efisiensi optimal hari ini. Hubungi kami untuk informasi lebih lanjut atau kunjungi link di bio kami! ✨\n\n#${hashtagCategory} #Profesional #SolusiBisnis #${platformHashtag} #KataLakuAI`;
-      
-      case 'Casual':
-        return `🙌 Siapa sih yang gak tergoda sama ${desc}? Rasanya yang khas atau kualitasnya emang selalu juara bikin nagih!\n\nCocok banget buat nemenin rutinitas santai kamu hari ini. Yuk, langsung diserbu sebelum kehabisan! 🤩✨\n\n#${hashtagCategory} #VibesSantai #RekomendasiHariIni #${platformHashtag}`;
-      
-      case 'Funny':
-        return `🤪 Hidup itu banyak drama, tapi kalau urusan ${desc} sih udah jelas anti-ribet dan bikin happy! \n\nLebih setia nemenin hari-hari kamu dibanding dia yang cuma datang pas butuh doang. Buruan cobain biar senyum kamu makin lebar! 🍕✌️\n\n#${hashtagCategory} #NgakakKocak #HumorLokal #${platformHashtag} #AntiDrama`;
-      
-      case 'Inspirational':
-        return `🌟 Setiap hal besar selalu dimulai dari langkah sederhana. Begitu juga dengan hadirnya ${desc} yang siap menemani setiap proses perjalanan suksesmu.\n\nMari mulai hari ini dengan energi positif dan tekad yang kuat! 💪✨\n\n#InspirasiPagi #MotivasiSukses #${hashtagCategory} #${platformHashtag} #TetapSemangat`;
-      
-      case 'Urgent':
-        return `🚨 JANGAN SAMPAI MENYESAL! Penawaran spesial untuk ${desc} terbatas hanya untuk hari ini saja!\n\nStok sangat terbatas dan cepat habis. Klik link di bio untuk pesan sekarang sebelum kehabisan! 🛒⚠️\n\n#PromoTerbatas #BeliSekarang #${hashtagCategory} #DiskonHariIni #${platformHashtag}`;
-      
-      case 'Storytelling':
-        return `📖 Dibuat dengan dedikasi penuh dan resep/cara yang otentik. Perjalanan menghadirkan ${desc} ini penuh dengan cerita dan cinta di setiap detailnya.\n\nKami percaya setiap usaha terbaik akan menghasilkan rasa/kualitas yang terbaik pula. Terima kasih sudah menjadi bagian dari perjalanan kami. ❤️\n\n#CeritaBrand #Otentik #${hashtagCategory} #KisahPerjalanan #${platformHashtag}`;
-      
-      case 'Luxury':
-        return `💎 Kemewahan sejati terpancar dari detail yang sempurna. Rasakan keanggunan eksklusif dan pengalaman tiada tara dengan ${desc}.\n\nDibuat khusus untuk Anda yang menghargai cita rasa dan kualitas premium terbaik. ✨\n\n#LuxuryLifestyle #PremiumQuality #Eksklusif #${hashtagCategory} #GayaHidup`;
-      
-      case 'Gen-Z':
-        return `🔥 Gak ada lawan! Vibes dari ${desc} ini beneran se-aesthetic dan se-worth itu. \n\nFix no debat, langsung check out sekarang biar gak kena FOMO parah ya gais! 💅✨\n\n#GenZStyle #KeceAbis #AestheticVibes #${hashtagCategory} #${platformHashtag}`;
-      
-      case 'Poetic':
-        return `🌸 Bagaikan hembusan angin sore yang menenangkan jiwa, begitulah kelembutan ${desc} menyapa harimu.\n\nMenghadirkan keindahan rasa yang terukir abadi di setiap lembaran kenangan indah kita. ✍️✨\n\n#SajakIndah #Estetik #${hashtagCategory} #UntaianKata #${platformHashtag}`;
-      
-      case 'Controversial':
-        return `🤔 Banyak yang bilang ${desc} itu cuma overrated aja. Tapi setelah dicobain langsung, ternyata hasilnya bikin takjub banget!\n\nKira-kira ini mitos atau fakta? Coba tulis pendapat jujur kalian di kolom komentar ya! 👇🔥\n\n#DebatSehat #ReviewJujur #${hashtagCategory} #MitosAtauFakta #${platformHashtag}`;
-      
+  const availableClosings = CLOSING_STYLE_POOL.filter(c => !excludeClosings.includes(c.name));
+  const closingObj = availableClosings.length > 0
+    ? availableClosings[Math.floor(Math.random() * availableClosings.length)]
+    : CLOSING_STYLE_POOL[Math.floor(Math.random() * CLOSING_STYLE_POOL.length)];
+
+  // Adapt hook text based on whether it is a theme or normal product description
+  let hookText = '';
+  if (themeName) {
+    switch (hookObj.name) {
+      case 'Rhetorical Question':
+        hookText = `Pernah kepikiran nggak sih pentingnya ${cleanDesc}? 🤔 Biar jualan makin laris, yuk perhatikan hal ini!`;
+        break;
+      case 'Mini-Storytelling':
+        hookText = `Sebagai seller, fokus kita nggak cuma jualan, tapi juga tentang bagaimana kita ${cleanDesc}. ✨`;
+        break;
+      case 'Fakta Menarik':
+        hookText = `Tau nggak sih? Mayoritas pembeli memutuskan membeli setelah melihat cara seller ${cleanDesc}. 💡`;
+        break;
+      case 'Urgency FOMO':
+        hookText = `⚠️ PENTING UNTUK DIINGAT! Kami selalu berkomitmen untuk ${cleanDesc} demi kepuasan Anda sebelum kehabisan promonya.`;
+        break;
+      case 'Sapaan Personal':
+        hookText = `Halo bestie! Kali ini kita mau sharing pentingnya ${cleanDesc} khusus buat kamu. 💕`;
+        break;
+      case 'Before After':
+        hookText = `Dengan mengutamakan proses ${cleanDesc}, pelanggan kami merasa jauh lebih tenang dan puas dengan hasilnya!`;
+        break;
+      case 'Benefit Hook':
+        hookText = `Melalui komitmen ${cleanDesc}, kami menjamin pengalaman belanja yang luar biasa untuk Anda.`;
+        break;
+      case 'Emoji Hook':
+        hookText = `✨ DETAIL DIBALIK LAYAR ✨ Yuk cari tahu bagaimana kami selalu berusaha ${cleanDesc} setiap harinya!`;
+        break;
       default:
-        return `✨ Nikmati keunikan ${desc} yang dirancang khusus untuk kenyamanan dan kebahagiaan Anda sehari-hari.\n\nDapatkan sekarang dan rasakan perbedaannya! 🚀\n\n#${hashtagCategory} #${platformHashtag}`;
+        hookText = `Hari ini kami ingin berbagi tentang pentingnya ${cleanDesc}.`;
     }
   } else {
-    // English Templates
-    switch (tone) {
-      case 'Professional':
-        return `💼 Introducing ${desc}. A high-quality solution engineered specifically to meet your demands with precision and excellence.\n\nAchieve peak performance and operational efficiency starting today. Contact us for inquiries or click the link in our bio! ✨\n\n#${hashtagCategory} #Professional #BusinessSolutions #${platformHashtag} #KataLakuAI`;
-      
-      case 'Casual':
-        return `🙌 Who is ready for some ${desc}? It's the perfect match to elevate your daily routine and keep things fresh!\n\nSimple, effective, and always hits the spot. Grab yours today and enjoy! 🤩✨\n\n#${hashtagCategory} #CasualVibes #DailyEssential #${platformHashtag}`;
-      
-      case 'Funny':
-        return `🤪 Life is full of complicated questions, but choosing ${desc} is definitely the easiest answer you'll make today!\n\nIt's reliable, satisfying, and won't leave you on read. Treat yourself right now! 🍕✌️\n\n#${hashtagCategory} #HumorModeOn #JustForFun #${platformHashtag}`;
-      
-      case 'Inspirational':
-        return `🌟 Great things never come from comfort zones. Let ${desc} be the catalyst that powers your growth and inspires your daily journey.\n\nBelieve in the process and make every single day count! 💪✨\n\n#Inspiration #Motivation #${hashtagCategory} #${platformHashtag} #KeepGrowing`;
-      
-      case 'Urgent':
-        return `🚨 DON'T MISS OUT! Special offer on ${desc} is available for a very limited time only!\n\nStocks are running extremely low. Head over to our link in bio and secure yours before it is gone! 🛒⚠️\n\n#LimitedTimeOffer #ShopNow #${hashtagCategory} #DealOfTheDay #${platformHashtag}`;
-      
-      case 'Storytelling':
-        return `📖 It all started with a simple vision to bring authentic value to your life. Crafting ${desc} has been a journey filled with passion, dedication, and care in every single step.\n\nWe believe in creating products that make a difference. Thank you for walking this path with us. ❤️\n\n#BrandStory #BehindTheScenes #${hashtagCategory} #OurJourney #${platformHashtag}`;
-      
-      case 'Luxury':
-        return `💎 True elegance lies in the details. Elevate your lifestyle and experience unmatched sophistication with ${desc}.\n\nDesigned exclusively for those who demand nothing but the absolute finest quality. ✨\n\n#LuxuryLifestyle #PremiumQuality #Excellence #${hashtagCategory} #Sophisticated`;
-      
-      case 'Gen-Z':
-        return `🔥 No cap! This ${desc} is literally giving everything it needs to give. Aesthetics are unmatched.\n\nDon't sleep on this, run to the link in bio and upgrade your setup now! 💅✨\n\n#Aesthetic #VibeCheck #MustHave #${hashtagCategory} #${platformHashtag}`;
-      
-      case 'Poetic':
-        return `🌸 Like a soft whisper of wind on a quiet morning, the beauty of ${desc} gently inspires your day.\n\nCrafting moments of pure peace that linger beautifully in your memory forever. ✍️✨\n\n#PoeticVibes #Aesthetic #ArtOfLiving #${hashtagCategory} #${platformHashtag}`;
-      
-      case 'Controversial':
-        return `🤔 Hot take: Is ${desc} actually overrated or are people just missing out on how game-changing it really is?\n\nLet's settle this debate in the comments. Drop your honest thoughts below! 👇🔥\n\n#HotTake #LetUsDebate #${hashtagCategory} #HonestReview #${platformHashtag}`;
-      
-      default:
-        return `✨ Experience the unique qualities of ${desc}, designed to bring convenience and joy to your daily life.\n\nGet yours now! 🚀\n\n#${hashtagCategory} #${platformHashtag}`;
-    }
+    hookText = hookObj.template(cleanDesc);
   }
+
+  const closingText = closingObj.template;
+  const platformHashtag = platform.replace(/[^a-zA-Z0-9]/g, '');
+
+  let bodyText = `Produk pilihan terbaik dengan kualitas terjamin. Sangat direkomendasikan untuk menunjang aktivitas keseharian Anda.`;
+  if (tone === 'Funny') {
+    bodyText = `Bebas pusing, bebas ribet, pokoknya paket lengkap anti-stres yang bakal bikin hari-harimu penuh tawa.`;
+  } else if (tone === 'Urgent') {
+    bodyText = `Promo diskon spesial ini hanya berlaku hari ini. Kelewatan dikit, harga kembali normal!`;
+  } else if (tone === 'Professional') {
+    bodyText = `Kami mengutamakan standar profesionalisme dan kualitas bahan terbaik demi kepuasan jangka panjang Anda.`;
+  } else if (tone === 'Inspirational') {
+    bodyText = `Percayalah bahwa setiap investasi kecil pada kualitas hidup Anda akan berbuah manis di masa depan.`;
+  } else if (tone === 'Storytelling') {
+    bodyText = `Kami merancang setiap detail dengan dedikasi tinggi agar produk ini bukan sekadar barang biasa, melainkan teman setia perjalanan Anda.`;
+  }
+
+  return `${hookText}\n\n${bodyText}\n\n${closingText} ✨🚀\n\n#KataLakuAI #${platformHashtag} #BisnisLokal`;
 }
 
 export default function CaptionGeneratorPage() {
   const { user } = useAuth();
   const { consumeCredit, isPro, remainingCredits } = useCredits();
   const toast = useToast();
+  const location = useLocation();
 
-  const [product, setProduct] = useState('');
+  // Retrieve prefilled values if redirected from content planner
+  const initialProduct = location.state?.prefilledDescription || '';
+  const initialTheme = location.state?.prefilledTheme || '';
+
+  const [product, setProduct] = useState(initialProduct);
   const [platform, setPlatform] = useState('Instagram');
   const [tone, setTone] = useState('Professional');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCaption, setGeneratedCaption] = useState('');
+  const [recentHooksUsed, setRecentHooksUsed] = useState([]);
+  const [recentClosingsUsed, setRecentClosingsUsed] = useState([]);
+
+  useEffect(() => {
+    if (location.state?.prefilledDescription) {
+      setProduct(location.state.prefilledDescription);
+      toast.info(`Prefilled tema konten: ${location.state.prefilledTheme}`);
+    }
+  }, [location.state]);
 
   const handleGenerate = async () => {
     if (!product.trim()) {
-      toast.warning('Please describe your product or service first.');
+      toast.warning('Deskripsikan produk atau layanan Anda terlebih dahulu.');
       return;
     }
 
     if (!isPro && remainingCredits <= 0) {
-      toast.error('No credits remaining. Upgrade to Pro!');
+      toast.error('Kredit habis. Upgrade ke Pro untuk melanjutkan!');
       return;
     }
 
@@ -146,7 +159,7 @@ export default function CaptionGeneratorPage() {
     setGeneratedCaption('');
 
     // Simulate generation delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
     const result = await consumeCredit();
     if (result?.needsUpgrade) {
@@ -154,47 +167,142 @@ export default function CaptionGeneratorPage() {
       return;
     }
 
-    // Generate dynamic custom caption matching context and language
-    const caption = generateMockCaption(product, platform, tone);
+    // Anti-repetitive check: fetch last 3 caption opening hooks
+    let excludeHooks = [...recentHooksUsed];
+    let excludeClosings = [...recentClosingsUsed];
+
+    if (user?.id) {
+      try {
+        const { data } = await supabase
+          .from('captions')
+          .select('content')
+          .eq('user_id', user.id)
+          .eq('tone', tone)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        if (data && data.length > 0) {
+          // simple heuristic to find matching hook names or first sentences
+          const firstSentences = data.map(d => d.content.split('\n')[0]);
+          HOOK_STYLE_POOL.forEach(h => {
+            firstSentences.forEach(s => {
+              if (s.toLowerCase().includes(h.name.toLowerCase().replace(' ', ''))) {
+                excludeHooks.push(h.name);
+              }
+            });
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Could not query captions history, using local state:', dbErr);
+      }
+    }
+
+    let caption = '';
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (apiKey) {
+      try {
+        let cleanProductInput = product.trim();
+        let themeContextText = "";
+        if (cleanProductInput.includes('Tema Konten:') && cleanProductInput.includes('Konteks:')) {
+          const themeMatch = cleanProductInput.match(/Tema Konten:\s*(.*?)\.\s*Konteks:/);
+          const themeName = themeMatch ? themeMatch[1].trim() : "";
+          const contextParts = cleanProductInput.split('Konteks:');
+          const cleanDesc = contextParts.length > 1 ? contextParts[1].trim() : cleanProductInput;
+          themeContextText = `Tema Konten jualan "${themeName}" dengan detail aktivitas/fokus: "${cleanDesc}"`;
+        } else {
+          themeContextText = `informasi produk: "${cleanProductInput}"`;
+        }
+
+        const prompt = `Kamu adalah copywriting AI specialist untuk UMKM Indonesia.
+Tugasmu: generate teks jualan persuasif berdasarkan ${themeContextText}.
+
+INSTRUKSI:
+- Tulis dalam Bahasa Indonesia yang casual dan engaging untuk platform: ${platform}
+- Sesuaikan gaya dengan tone: ${tone}
+- Pastikan struktur rapi dengan emoji yang relevan
+- Jangan lebih dari 150 kata
+- Hindari menulis teks meta seperti "Tema Konten" atau "Konteks" di dalam hasil caption. Tulis langsung caption jualan yang siap diposting.
+- Hindari repetisi kata pembuka yang membosankan
+
+OUTPUT FORMAT:
+[Satu draf caption terbaik]`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.95,
+              topP: 0.9
+            }
+          })
+        });
+
+        if (response.ok) {
+          const rawJson = await response.json();
+          caption = rawJson.candidates[0].content.parts[0].text.trim();
+        }
+      } catch (apiErr) {
+        console.warn('Gemini API call failed, falling back to randomized generator:', apiErr);
+      }
+    }
+
+    if (!caption) {
+      // Pick random styles & generate
+      const availableHooks = HOOK_STYLE_POOL.filter(h => !excludeHooks.includes(h.name));
+      const hookPicked = availableHooks[Math.floor(Math.random() * availableHooks.length)] || HOOK_STYLE_POOL[0];
+      const availableClosings = CLOSING_STYLE_POOL.filter(c => !excludeClosings.includes(c.name));
+      const closingPicked = availableClosings[Math.floor(Math.random() * availableClosings.length)] || CLOSING_STYLE_POOL[0];
+
+      caption = generateRandomizedCaption(product, platform, tone, excludeHooks, excludeClosings);
+
+      // Rotate local state tracking
+      setRecentHooksUsed(prev => [...prev.slice(-2), hookPicked.name]);
+      setRecentClosingsUsed(prev => [...prev.slice(-2), closingPicked.name]);
+    }
 
     // Save to Supabase DB if user session exists
     if (user?.id) {
-      const { error } = await supabase.from('captions').insert({
-        user_id: user.id,
-        description: product,
-        platform,
-        tone,
-        content: caption,
-        created_at: new Date().toISOString()
-      });
-      if (error) console.error('Error saving caption to Supabase:', error);
+      try {
+        await supabase.from('captions').insert({
+          user_id: user.id,
+          description: product,
+          platform,
+          tone,
+          content: caption,
+          created_at: new Date().toISOString()
+        });
+      } catch (dbInsertErr) {
+        console.warn('Failed to insert into captions table in DB:', dbInsertErr);
+      }
     }
 
     setGeneratedCaption(caption);
     setIsGenerating(false);
-    toast.success('Caption generated successfully!');
+    toast.success('Caption berhasil dibuat!');
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedCaption);
-    toast.success('Caption copied to clipboard!');
+    toast.success('Caption disalin ke papan klip!');
   };
 
   return (
     <div className="page-container animate-fade-in-up">
       <div className="page-header">
         <h1><Sparkles size={28} /> AI Caption Generator</h1>
-        <p>Describe your product, pick a platform and tone, and let AI craft the perfect caption.</p>
+        <p>Tulis caption kreatif & persuasif untuk media sosial Anda dalam hitungan detik.</p>
       </div>
 
       <div className="generator-layout">
         {/* Input Side */}
         <div className="generator-input card">
           <div className="form-group">
-            <label className="form-label">Product / Service Description</label>
+            <label className="form-label">Deskripsi Produk / Layanan</label>
             <textarea
               className="form-input generator-textarea"
-              placeholder="e.g. Handmade organic soap with lavender scent, perfect for sensitive skin..."
+              placeholder="Contoh: Sepatu sneakers olahraga pria bahan breathable, cocok buat lari pagi..."
               value={product}
               onChange={(e) => setProduct(e.target.value)}
               rows={4}
@@ -202,7 +310,7 @@ export default function CaptionGeneratorPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Platform</label>
+            <label className="form-label">Platform Sosial Media</label>
             <div className="chip-group">
               {PLATFORMS.map(p => (
                 <button
@@ -217,7 +325,7 @@ export default function CaptionGeneratorPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Tone</label>
+            <label className="form-label">Nada Bicara (Tone)</label>
             <div className="chip-group">
               {TONES.map(t => (
                 <button
@@ -234,15 +342,13 @@ export default function CaptionGeneratorPage() {
                   className={`chip premium ${tone === t ? 'active' : ''}`}
                   onClick={() => {
                     if (!isPro) {
-                      toast.info('Premium tones are available for Pro users.');
+                      toast.info('Nada bicara premium hanya tersedia untuk anggota Pro.');
                       return;
                     }
                     setTone(t);
                   }}
-                  disabled={!isPro}
                 >
-                  {t}
-                  <span className="chip-badge">PRO</span>
+                  👑 {t}
                 </button>
               ))}
             </div>
@@ -252,49 +358,51 @@ export default function CaptionGeneratorPage() {
             className="btn btn-primary btn-lg"
             onClick={handleGenerate}
             disabled={isGenerating}
-            style={{ width: '100%', marginTop: 'var(--space-2)' }}
+            style={{ marginTop: 'var(--space-2)' }}
           >
             {isGenerating ? (
               <>
-                <div className="spinner" />
-                Generating...
+                <RotateCcw className="spin" size={18} style={{ marginRight: '8px' }} />
+                Sedang Menulis...
               </>
             ) : (
               <>
-                <Sparkles size={18} />
-                Generate Caption
-                {!isPro && <span className="btn-credit-cost"><Zap size={12} /> 1 credit</span>}
+                <Sparkles size={18} style={{ marginRight: '8px' }} />
+                Buat Caption Sekarang
               </>
             )}
           </button>
         </div>
 
         {/* Output Side */}
-        <div className="generator-output card">
-          <h3>Generated Caption</h3>
-          {generatedCaption ? (
-            <>
-              <div className="caption-result">
-                <p>{generatedCaption}</p>
+        <div className="generator-output">
+          <div className="card" style={{ minHeight: '340px', display: 'flex', flexDirection: 'column', justifyContent: generatedCaption ? 'space-between' : 'center' }}>
+            {generatedCaption ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--primary-400)' }}>
+                    ✨ AI GENERATED CAPTION ({platform})
+                  </span>
+                  <button className="btn btn-ghost btn-sm" onClick={handleCopy} title="Copy to clipboard">
+                    <Copy size={16} />
+                  </button>
+                </div>
+                <p className="generated-text-content" style={{ flex: 1, whiteSpace: 'pre-wrap', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', lineHeight: 1.6, textAlign: 'left' }}>
+                  {generatedCaption}
+                </p>
+                <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-4)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={handleCopy}>
+                    Salin Teks
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                <Sparkles size={40} style={{ marginBottom: 'var(--space-3)', opacity: 0.3 }} />
+                <p style={{ fontSize: 'var(--text-sm)' }}>Caption hasil tulisan AI akan muncul di sini.</p>
               </div>
-              <div className="caption-actions">
-                <button className="btn btn-secondary" onClick={handleCopy}>
-                  <Copy size={16} /> Copy
-                </button>
-                <button className="btn btn-ghost">
-                  <Heart size={16} /> Save
-                </button>
-                <button className="btn btn-ghost" onClick={handleGenerate}>
-                  <RotateCcw size={16} /> Regenerate
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="caption-empty">
-              <Sparkles size={40} />
-              <p>Your AI-generated caption will appear here</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

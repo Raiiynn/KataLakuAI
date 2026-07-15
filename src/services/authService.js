@@ -149,6 +149,7 @@ async function getProfile(userId) {
     email: data.email,
     subscriptionPlan: data.subscription_plan,
     remainingCredits: data.remaining_credits,
+    productCategory: data.product_category || localStorage.getItem('local_category_' + userId) || null,
     createdAt: data.created_at,
   };
 }
@@ -161,6 +162,7 @@ async function createProfile({ id, fullName, businessName, email }) {
     email: email,
     subscription_plan: 'free',
     remaining_credits: 10,
+    product_category: null,
     created_at: new Date().toISOString(),
   };
 
@@ -180,6 +182,7 @@ async function createProfile({ id, fullName, businessName, email }) {
       email,
       subscriptionPlan: 'free',
       remainingCredits: 10,
+      productCategory: localStorage.getItem('local_category_' + id) || null,
       createdAt: newProfile.created_at,
     };
   }
@@ -191,6 +194,7 @@ async function createProfile({ id, fullName, businessName, email }) {
     email: data.email,
     subscriptionPlan: data.subscription_plan,
     remainingCredits: data.remaining_credits,
+    productCategory: data.product_category || localStorage.getItem('local_category_' + data.id) || null,
     createdAt: data.created_at,
   };
 }
@@ -246,6 +250,7 @@ export async function upgradeToPro(userId) {
     email: data.email,
     subscriptionPlan: data.subscription_plan,
     remainingCredits: data.remaining_credits,
+    productCategory: data.product_category || localStorage.getItem('local_category_' + data.id) || null,
     createdAt: data.created_at,
   };
 }
@@ -270,6 +275,48 @@ export async function updateUserProfile(userId, updates) {
     email: data.email,
     subscriptionPlan: data.subscription_plan,
     remainingCredits: data.remaining_credits,
+    productCategory: data.product_category || localStorage.getItem('local_category_' + data.id) || null,
     createdAt: data.created_at,
   };
 }
+
+export async function updateProductCategory(userId, productCategory) {
+  // Always update local storage first as a resilient fallback
+  localStorage.setItem('local_category_' + userId, productCategory);
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        product_category: productCategory,
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (!error && data) {
+      return {
+        id: data.id,
+        fullName: data.full_name,
+        businessName: data.business_name,
+        email: data.email,
+        subscriptionPlan: data.subscription_plan,
+        remainingCredits: data.remaining_credits,
+        productCategory: data.product_category,
+        createdAt: data.created_at,
+      };
+    }
+    console.warn('DB update failed, using local storage fallback:', error);
+  } catch (err) {
+    console.warn('DB update exception, using local storage fallback:', err);
+  }
+
+  // Fallback return using localStorage if DB column is not created yet
+  const profile = await getProfile(userId);
+  if (profile) {
+    profile.productCategory = productCategory;
+    return profile;
+  }
+  return null;
+}
+

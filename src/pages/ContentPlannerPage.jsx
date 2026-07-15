@@ -1,205 +1,203 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCredits } from '../context/CreditContext';
 import { useToast } from '../context/ToastContext';
-import { supabase } from '../utils/supabase';
-import { CalendarDays, Save, Trash, Plus, Edit2, X } from 'lucide-react';
+import { 
+  fetchWeeklyPlan, 
+  generateWeeklyPlan, 
+  getMondayOfThisWeek 
+} from '../services/plannerService';
+import { CalendarDays, Sparkles, ArrowRight, RefreshCw, Zap, ShieldCheck, Heart } from 'lucide-react';
 import './ProtectedPages.css';
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAYS_FULL = {
+  Monday: 'Senin',
+  Tuesday: 'Selasa',
+  Wednesday: 'Rabu',
+  Thursday: 'Kamis',
+  Friday: 'Jumat',
+  Saturday: 'Sabtu',
+  Sunday: 'Minggu'
+};
 
 export default function ContentPlannerPage() {
   const { user } = useAuth();
+  const { isPro, openUpgradeModal } = useCredits();
   const toast = useToast();
+  const navigate = useNavigate();
 
-  const [posts, setPosts] = useState({}); // { 'Mon': { id, content }, ... }
-  const [editingDay, setEditingDay] = useState(null);
-  const [editingText, setEditingText] = useState('');
+  const [weeklyPlan, setWeeklyPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const weekStart = getMondayOfThisWeek();
 
   useEffect(() => {
-    async function fetchPlanner() {
+    async function loadPlan() {
       if (!user?.id) return;
+      setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('planner_posts')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-        
-        // Map list to day keys
-        const mapped = {};
-        data?.forEach(post => {
-          mapped[post.day] = { id: post.id, content: post.content };
-        });
-        setPosts(mapped);
+        const plan = await fetchWeeklyPlan(user.id, weekStart);
+        setWeeklyPlan(plan);
       } catch (err) {
-        console.error('Error fetching planner posts:', err);
+        console.error('Error loading weekly plan:', err);
       } finally {
         setIsLoading(false);
       }
     }
+    loadPlan();
+  }, [user, weekStart]);
 
-    fetchPlanner();
-  }, [user]);
-
-  const handleEditStart = (day) => {
-    setEditingDay(day);
-    setEditingText(posts[day]?.content || '');
-  };
-
-  const handleSave = async (day) => {
+  const handleGenerate = async () => {
     if (!user?.id) return;
-    setIsSaving(true);
+    
+    if (!user.productCategory) {
+      toast.warning('Silakan pilih kategori produk utama Anda terlebih dahulu di menu Settings.');
+      navigate('/settings');
+      return;
+    }
+
+    setIsGenerating(true);
     try {
-      const existing = posts[day];
-      if (existing) {
-        if (!editingText.trim()) {
-          // Delete if text cleared
-          await handleDelete(day);
-        } else {
-          // Update
-          const { error } = await supabase
-            .from('planner_posts')
-            .update({ content: editingText })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          
-          setPosts(prev => ({
-            ...prev,
-            [day]: { ...existing, content: editingText }
-          }));
-          toast.success(`Post for ${day} updated!`);
-        }
-      } else {
-        if (editingText.trim()) {
-          // Insert new
-          const { data, error } = await supabase
-            .from('planner_posts')
-            .insert({
-              user_id: user.id,
-              day,
-              content: editingText,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
-
-          setPosts(prev => ({
-            ...prev,
-            [day]: { id: data.id, content: data.content }
-          }));
-          toast.success(`Post for ${day} scheduled!`);
-        }
+      const result = await generateWeeklyPlan(user.id, user.productCategory, isPro);
+      if (result.error === 'QUOTA_EXCEEDED') {
+        toast.error('Quota mingguan tercapai. Upgrade ke Pro untuk mendapatkan unlimited plan!');
+        openUpgradeModal();
+        return;
       }
-      setEditingDay(null);
+
+      setWeeklyPlan(result.planData);
+      toast.success('Rencana konten mingguan berhasil dibuat!');
     } catch (err) {
-      toast.error('Failed to save planner post.');
+      toast.error('Gagal membuat rencana konten harian.');
       console.error(err);
     } finally {
-      setIsSaving(false);
+      setIsGenerating(false);
     }
   };
 
-  const handleDelete = async (day) => {
-    const existing = posts[day];
-    if (!existing) return;
-
-    try {
-      const { error } = await supabase
-        .from('planner_posts')
-        .delete()
-        .eq('id', existing.id);
-
-      if (error) throw error;
-
-      setPosts(prev => {
-        const copy = { ...prev };
-        delete copy[day];
-        return copy;
-      });
-      toast.success(`Post for ${day} removed.`);
-    } catch (err) {
-      toast.error('Failed to delete post.');
-      console.error(err);
-    }
+  const handlePrefillCaption = (theme, reasoning) => {
+    // Redirect to caption generator and pass state
+    navigate('/caption-generator', {
+      state: {
+        prefilledTheme: theme,
+        prefilledDescription: `Tema Konten: ${theme}. Konteks: ${reasoning}`
+      }
+    });
   };
+
+  const productCategoryLabel = {
+    fashion: 'Fashion',
+    food: 'Food & Beverage',
+    beauty: 'Beauty & Skincare',
+    electronics: 'Electronics',
+    home_living: 'Home & Living',
+    other: 'Lainnya'
+  }[user?.productCategory] || 'Belum diatur';
 
   return (
     <div className="page-container animate-fade-in-up">
-      <div className="page-header">
-        <h1><CalendarDays size={28} /> Content Planner</h1>
-        <p>Plan and schedule your social media content for the week.</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+        <div>
+          <h1><CalendarDays size={28} /> AI Content Planner</h1>
+          <p>Dapatkan ide tema konten harian yang dirancang khusus oleh AI untuk bisnis Anda.</p>
+        </div>
+        {user?.productCategory && (
+          <div className="badge-category" style={{ background: 'var(--surface-100)', border: '1px solid var(--glass-border)', padding: 'var(--space-2) var(--space-4)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            Kategori: <strong>{productCategoryLabel}</strong>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
           <div className="spinner spinner-lg spinner-primary" style={{ margin: '0 auto var(--space-4)' }} />
-          <p>Loading planner...</p>
+          <p>Memuat rencana konten...</p>
+        </div>
+      ) : weeklyPlan ? (
+        <div className="planner-container">
+          {/* Top Banner / Actions */}
+          <div className="planner-top-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--surface-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <div>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>Rencana Minggu Ini ({weekStart})</h3>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                {isPro ? '✨ Anda menikmati akses pembuatan rencana konten tanpa batas.' : '🔒 Akun Free terbatas 1x pembuatan rencana per minggu.'}
+              </p>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={handleGenerate} disabled={isGenerating}>
+              <RefreshCw size={14} className={isGenerating ? 'spin' : ''} style={{ marginRight: '6px' }} />
+              Generate Ulang Rencana Konten
+            </button>
+          </div>
+
+          {/* 7 Days Cards */}
+          <div className="planner-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--space-4)' }}>
+            {weeklyPlan.week_plan.map((dayPlan, idx) => {
+              const localDay = DAYS_FULL[dayPlan.day] || dayPlan.day;
+              return (
+                <div key={idx} className="planner-day-card card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-5)', borderLeft: '4px solid var(--primary-500)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+                  <div style={{ flex: 1, minWidth: '260px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <span className="day-badge" style={{ background: 'var(--surface-200)', color: 'var(--primary-400)', fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)' }}>
+                        {localDay}
+                      </span>
+                    </div>
+                    <h3 className="day-theme-title" style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                      {dayPlan.theme}
+                    </h3>
+                    <p className="day-reasoning" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {dayPlan.reasoning}
+                    </p>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handlePrefillCaption(dayPlan.theme, dayPlan.reasoning)}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Tulis Caption <ArrowRight size={14} style={{ marginLeft: '6px' }} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Free watermark label */}
+          {!isPro && (
+            <div style={{ marginTop: 'var(--space-6)', textAlign: 'center', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+              ⚡ Rencana konten dibuat menggunakan versi Free Plan
+            </div>
+          )}
         </div>
       ) : (
-        <div className="planner-grid">
-          {DAYS.map(day => {
-            const post = posts[day];
-            const isEditing = editingDay === day;
-
-            return (
-              <div key={day} className="planner-day card" style={{ display: 'flex', flexDirection: 'column', minHeight: '220px' }}>
-                <div className="planner-day-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
-                  <h3 className="planner-day-label" style={{ margin: 0, border: 'none', padding: 0 }}>{day}</h3>
-                  {post && !isEditing && (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button className="btn-ghost" onClick={() => handleEditStart(day)} style={{ padding: '4px' }} title="Edit post">
-                        <Edit2 size={12} />
-                      </button>
-                      <button className="btn-ghost" onClick={() => handleDelete(day)} style={{ padding: '4px', color: 'var(--error)' }} title="Delete post">
-                        <Trash size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="planner-day-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: isEditing ? 'space-between' : 'center' }}>
-                  {isEditing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: '100%', height: '100%' }}>
-                      <textarea
-                        className="form-input"
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        placeholder="Write planned caption..."
-                        style={{ flex: 1, minHeight: '80px', fontSize: 'var(--text-xs)', resize: 'none', padding: 'var(--space-2)' }}
-                      />
-                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setEditingDay(null)} disabled={isSaving}>
-                          <X size={12} />
-                        </button>
-                        <button className="btn btn-primary btn-sm" onClick={() => handleSave(day)} disabled={isSaving}>
-                          <Save size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : post ? (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <p className="planner-post-text" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', textAlign: 'left', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', flex: 1 }}>
-                        {post.content}
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="planner-empty-text">No posts planned</p>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleEditStart(day)}>
-                        <Plus size={12} /> Add Post
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        /* Empty State */
+        <div className="card empty-state" style={{ padding: 'var(--space-16) var(--space-8)', textAlign: 'center', background: 'var(--surface-50)', border: '1px solid var(--glass-border)' }}>
+          <div className="onboarding-icon-wrapper" style={{ margin: '0 auto var(--space-4)' }}>
+            <Sparkles size={32} />
+          </div>
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
+            Mulai Jadwal Konten Anda Dengan AI
+          </h2>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: '520px', margin: '0 auto var(--space-6)', lineHeight: 1.6 }}>
+            Dapatkan rekomendasi ide dan tema konten mingguan yang spesifik dirancang sesuai dengan kategori produk jualan Anda.
+          </p>
+          <button 
+            className="btn btn-primary btn-lg" 
+            onClick={handleGenerate}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw size={16} className="spin" style={{ marginRight: '8px' }} />
+                Sedang Membuat Rencana...
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} style={{ marginRight: '8px' }} />
+                Generate Rencana Konten Mingguan
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>

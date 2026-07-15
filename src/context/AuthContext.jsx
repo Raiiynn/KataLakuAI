@@ -10,6 +10,7 @@ import {
   restoreSession,
   logoutUser,
   updateUserProfile,
+  updateProductCategory,
 } from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -112,6 +113,14 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  const updateCategory = useCallback(async (productCategory) => {
+    if (!user) return;
+    const updatedUser = await updateProductCategory(user.id, productCategory);
+    if (updatedUser) {
+      setUser(updatedUser);
+    }
+  }, [user]);
+
   const refreshUser = useCallback(async () => {
     const session = await restoreSession();
     if (session) {
@@ -131,6 +140,7 @@ export function AuthProvider({ children }) {
     verifyEmail: verifyUserEmail,
     logout,
     updateProfile,
+    updateCategory,
     refreshUser,
   };
 
