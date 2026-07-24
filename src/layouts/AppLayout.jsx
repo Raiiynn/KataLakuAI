@@ -85,9 +85,7 @@ export default function AppLayout() {
               <div className="credits-card-header">
                 {isPro ? <Crown size={16} /> : <Zap size={16} />}
                 <span>
-                  {subscriptionPlan === 'business'
-                    ? 'Business Plan'
-                    : subscriptionPlan === 'pro'
+                  {subscriptionPlan === 'pro'
                     ? 'Pro Creator'
                     : 'Free Plan'}
                 </span>
@@ -95,14 +93,14 @@ export default function AppLayout() {
               <div className="credits-card-value">
                 <span className="credits-number">{creditsDisplay}</span>
                 <span className="credits-label">
-                  / {subscriptionPlan === 'business' ? 1000 : subscriptionPlan === 'pro' ? 200 : 10} kredit
+                  / {subscriptionPlan === 'pro' ? 200 : 10} kredit
                 </span>
               </div>
               <div className="credits-bar">
                 <div
                   className="credits-bar-fill"
                   style={{
-                    width: `${(remainingCredits / (subscriptionPlan === 'business' ? 1000 : subscriptionPlan === 'pro' ? 200 : 10)) * 100}%`
+                    width: `${(remainingCredits / (subscriptionPlan === 'pro' ? 200 : 10)) * 100}%`
                   }}
                 />
               </div>

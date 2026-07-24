@@ -18,7 +18,7 @@ export default function UpgradeModal() {
           <div className="upgrade-icon-wrapper">
             <Crown size={32} />
           </div>
-          <h2 className="upgrade-title">Pilih Plan Terbaik Anda</h2>
+          <h2 className="upgrade-title">Upgrade ke Pro Creator</h2>
           <p className="upgrade-subtitle">
             Kembangkan bisnis Anda ke level berikutnya dengan fitur AI unggulan dari KataLaku AI.
           </p>
@@ -32,7 +32,7 @@ export default function UpgradeModal() {
             <p className="plan-desc">Untuk pertumbuhan cepat media sosial</p>
             <div className="plan-price">
               <span className="price-currency">Rp</span>
-              <span className="price-amount">99k</span>
+              <span className="price-amount">19k</span>
               <span className="price-period">/bulan</span>
             </div>
             <ul className="plan-features">
@@ -49,30 +49,6 @@ export default function UpgradeModal() {
               Upgrade ke Pro
             </button>
           </div>
-
-          {/* Business Plan */}
-          <div className="upgrade-plan-card">
-            <h3 className="plan-name">Business</h3>
-            <p className="plan-desc">Untuk tim & agensi sosial media</p>
-            <div className="plan-price">
-              <span className="price-currency">Rp</span>
-              <span className="price-amount">299k</span>
-              <span className="price-period">/bulan</span>
-            </div>
-            <ul className="plan-features">
-              <li><Check size={16} /> 1000 Kredit / Bulan</li>
-              <li><Check size={16} /> Akses Semua Tone Premium</li>
-              <li><Check size={16} /> Laporan Mingguan & Niche Insights</li>
-              <li><Check size={16} /> Kelola Hingga 3 Kategori Produk</li>
-              <li><Check size={16} /> Prioritas Kecepatan AI (Tanpa Antre)</li>
-            </ul>
-            <button
-              className="btn btn-secondary upgrade-cta"
-              onClick={() => upgradeToPlan('business')}
-            >
-              Pilih Business
-            </button>
-          </div>
         </div>
 
         <button className="upgrade-skip" onClick={closeUpgradeModal}>
@@ -82,3 +58,4 @@ export default function UpgradeModal() {
     </div>
   );
 }
+

@@ -62,7 +62,7 @@ export default function ContentPlannerPage() {
     try {
       const result = await generateWeeklyPlan(user.id, user.productCategory, isPro);
       if (result.error === 'QUOTA_EXCEEDED') {
-        toast.error('Quota mingguan tercapai. Upgrade ke Pro Creator atau Business untuk membuat lebih banyak rencana konten!');
+        toast.error('Quota mingguan tercapai. Upgrade ke Pro Creator untuk membuat lebih banyak rencana konten!');
         openUpgradeModal();
         return;
       }

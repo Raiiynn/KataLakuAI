@@ -10,12 +10,12 @@ export function CreditProvider({ children }) {
 
   const rawCredits = user?.remainingCredits ?? 0;
   const subscriptionPlan = user?.subscriptionPlan || 'free';
-  const isPro = subscriptionPlan === 'pro' || subscriptionPlan === 'business';
+  const isPro = subscriptionPlan === 'pro';
 
   // Proteksi data lama jika database menyimpan 999999 untuk pro
   const remainingCredits = subscriptionPlan === 'pro' && rawCredits > 200 
     ? 200 
-    : (subscriptionPlan === 'business' && rawCredits > 1000 ? 1000 : rawCredits);
+    : rawCredits;
 
   const consumeCredit = useCallback(async () => {
     if (!user) return null;
@@ -46,7 +46,7 @@ export function CreditProvider({ children }) {
   const upgradeToPlan = useCallback(async (plan) => {
     if (!user) return;
     
-    const credits = plan === 'business' ? 1000 : 200;
+    const credits = 200;
     
     // Apply optimistic local update
     updateProfile({ subscriptionPlan: plan, remainingCredits: credits });

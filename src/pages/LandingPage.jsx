@@ -59,7 +59,7 @@ export default function LandingPage() {
     },
     {
       question: "Bagaimana cara kerja sistem Kredit?",
-      answer: "Setiap pembuatan caption atau perencanaan konten menggunakan sejumlah kredit. Akun Free mendapatkan 10 kredit gratis setiap bulannya. Jika Anda membutuhkan lebih banyak, Anda dapat melakukan upgrade ke paket Pro atau Business untuk mendapatkan isi ulang kredit bulanan."
+      answer: "Setiap pembuatan caption atau perencanaan konten menggunakan sejumlah kredit. Akun Free mendapatkan 10 kredit gratis setiap bulannya. Jika Anda membutuhkan lebih banyak, Anda dapat melakukan upgrade ke paket Pro Creator untuk mendapatkan isi ulang kredit bulanan."
     },
     {
       question: "Apakah saya bisa membatalkan langganan kapan saja?",
@@ -295,7 +295,7 @@ export default function LandingPage() {
                 <p className="plan-description">Untuk pertumbuhan cepat media sosial</p>
                 <div className="price-container">
                   <span className="price-currency">Rp</span>
-                  <span className="price-amount">99k</span>
+                  <span className="price-amount">19k</span>
                   <span className="price-period">/bulan</span>
                 </div>
               </div>
@@ -308,28 +308,6 @@ export default function LandingPage() {
                 <li><Check size={16} /> Dukungan Email Prioritas</li>
               </ul>
               <button onClick={handleCtaClick} className="btn btn-primary btn-block">Upgrade ke Pro</button>
-            </div>
-
-            {/* Enterprise Plan */}
-            <div className="pricing-card">
-              <div className="pricing-card-header">
-                <h3>Business</h3>
-                <p className="plan-description">Untuk tim dan agensi sosial media</p>
-                <div className="price-container">
-                  <span className="price-currency">Rp</span>
-                  <span className="price-amount">299k</span>
-                  <span className="price-period">/bulan</span>
-                </div>
-              </div>
-              <ul className="pricing-features">
-                <li><Check size={16} /> 1000 Kredit Pembuatan / Bulan</li>
-                <li><Check size={16} /> Akses Semua Tone Premium</li>
-                <li><Check size={16} /> Laporan Mingguan & Niche Insights</li>
-                <li><Check size={16} /> Kelola Hingga 3 Kategori Produk/Brand</li>
-                <li><Check size={16} /> Prioritas Kecepatan AI (Tanpa Antre)</li>
-                <li><Check size={16} /> Dukungan Prioritas 24/7 (WhatsApp/Email)</li>
-              </ul>
-              <button onClick={handleCtaClick} className="btn btn-secondary btn-block">Hubungi Kami</button>
             </div>
           </div>
         </div>

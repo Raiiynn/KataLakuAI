@@ -121,14 +121,12 @@ export default function DashboardPage() {
           <div className="stat-info">
             <span className="stat-value">{creditsDisplay}</span>
             <span className="stat-label">
-              {subscriptionPlan === 'business'
-                ? 'Business Plan'
-                : subscriptionPlan === 'pro'
+              {subscriptionPlan === 'pro'
                 ? 'Pro Creator Plan'
                 : 'Kredit Tersisa'}
             </span>
           </div>
-          {subscriptionPlan !== 'business' && (
+          {subscriptionPlan !== 'pro' && (
             <button className="stat-action" onClick={openUpgradeModal}>
               Upgrade
             </button>
@@ -223,16 +221,14 @@ export default function DashboardPage() {
       </section>
 
       {/* Pro Banner (for free/pro users) */}
-      {subscriptionPlan !== 'business' && (
+      {subscriptionPlan !== 'pro' && (
         <section className="dashboard-pro-banner" onClick={openUpgradeModal}>
           <div className="pro-banner-content">
             <Crown size={24} />
             <div>
-              <h3>{subscriptionPlan === 'pro' ? 'Upgrade to Business Plan' : 'Upgrade to Pro Creator'}</h3>
+              <h3>Upgrade to Pro Creator</h3>
               <p>
-                {subscriptionPlan === 'pro'
-                  ? 'Dapatkan 1000 kredit, prioritas kecepatan AI tanpa antre, dan kelola hingga 3 kategori produk!'
-                  : 'Dapatkan 200 kredit pembuatan, AI lebih cepat, dan akses premium hanya dengan Rp99k/bulan'}
+                Dapatkan 200 kredit pembuatan, AI lebih cepat, dan akses premium hanya dengan Rp19k/bulan
               </p>
             </div>
           </div>

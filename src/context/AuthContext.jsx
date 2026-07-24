@@ -44,11 +44,18 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
+      // Skip initial session event — already handled by initSession above
+      if (event === 'INITIAL_SESSION') return;
+
       if (session) {
-        const result = await restoreSession();
-        if (result) {
-          setUser(result.user);
-          setIsAuthenticated(true);
+        try {
+          const result = await restoreSession();
+          if (result && result.user) {
+            setUser(result.user);
+            setIsAuthenticated(true);
+          }
+        } catch (err) {
+          console.error('Error in auth state change handler:', err);
         }
       } else {
         setUser(null);

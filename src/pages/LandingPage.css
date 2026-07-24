@@ -508,10 +508,10 @@
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
   align-items: stretch;
-  max-width: 1000px;
+  max-width: 780px;
   margin: 0 auto;
 }
 

@@ -97,10 +97,13 @@
 /* Grid Layout */
 .upgrade-plans-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--space-6);
   margin-bottom: var(--space-8);
   text-align: left;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .upgrade-plan-card {

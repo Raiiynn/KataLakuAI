@@ -123,7 +123,20 @@ export async function restoreSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
 
-  const profile = await getProfile(session.user.id);
+  let profile = await getProfile(session.user.id);
+
+  // If profile doesn't exist yet (e.g., first login, race condition), create it
+  if (!profile) {
+    profile = await createProfile({
+      id: session.user.id,
+      fullName: session.user.user_metadata?.full_name || 'User',
+      businessName: session.user.user_metadata?.business_name || 'My Business',
+      email: session.user.email,
+    });
+  }
+
+  if (!profile) return null;
+
   return { user: profile, token: session.access_token };
 }
 
@@ -252,7 +265,7 @@ export async function upgradeToPro(userId) {
 }
 
 export async function upgradeToPlan(userId, plan) {
-  const credits = plan === 'business' ? 1000 : 200;
+  const credits = 200;
   const { data, error } = await supabase
     .from('profiles')
     .update({
